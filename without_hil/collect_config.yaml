@@ -1,0 +1,54 @@
+# Normal G1 SFT collection. The robot must already be in DATA_COLLECTION_MODE.
+# IMPORTANT: task.instruction and robot.reset_pose below are examples from an
+# older collection setup. Replace and verify them before commanding real hardware.
+profile: g1_pick_3cam_16d  # or: g1_place_4cam_23d
+
+task:
+  instruction: "Left arm pick up the object with the red marker. Right arm pick up the object with the red marker."
+
+dataset:
+  num_episodes: 10
+  raw_root: data/raw
+  episode_root: data/episodes
+  lerobot_root: data/lerobot
+  output_fps: 30
+  max_skew_s: 0.1
+  # After startup/inter-episode robot reset, reserve time to restore the scene.
+  environment_reset_s: 10.0
+
+capture:
+  python: /usr/bin/python3
+  max_queue: 2048
+  topic_timeout_s: 2.0
+
+robot:
+  # Arm/leg/head values are radians; grippers use the training 0..100 scale.
+  reset_pose:
+    right_arm: [0.161452, 1.041597, -0.641492, 1.460299, -0.274247, 0.687009, -1.538203]
+    right_gripper: [0.0]
+    left_arm: [-0.161452, -1.041597, 0.641492, -1.460299, 0.274247, -0.687009, 1.538203]
+    left_gripper: [0.0]
+    leg: [0.580408, 1.433325, 0.901849, 0, 0]
+    head: [0, 0.458594]
+  # Blocking SDK reset, matching the vendor init-position examples.
+  sdk_init_settle_s: 2.0
+  reset_timeout_s: 45.0
+  reset_retries: 2
+  reset_max_speed_rad_s: 0.4
+  joint_tolerance_rad: 0.03
+  gripper_tolerance_model: 3.0
+  gripper_action_scale: 0.0012
+  # SDK command is total opening width; joint-state feedback is one finger's travel.
+  gripper_max_width_m: 0.12
+  gripper_feedback_max_position_m: 0.06
+  # After every saved/discarded episode, both grippers open to this width first;
+  # only after feedback verification succeeds does the full reset pose run.
+  gripper_open_width_m: 0.12
+  gripper_open_settle_s: 2.0
+  verify_gripper_open_position: true
+  gripper_velocity_mps: 0.1
+  gripper_effort_n: 10.0
+  gripper_settle_s: 2.0
+  # Fully closed grippers often have a non-zero encoder reading. Keep body
+  # verification strict while treating gripper feedback as diagnostic.
+  verify_gripper_position: false

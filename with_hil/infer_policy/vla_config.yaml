@@ -1,0 +1,115 @@
+profile: g1_pick_3cam_16d  # or: g1_place_4cam_23d
+
+policy:
+  server_address: "127.0.0.1:30014"
+  checkpoint: "/path/to/checkpoint/pretrained_model"
+  instruction: "Left arm pick up A. Right arm pick up A."
+  type: pi05
+  device: cuda
+  auto_setup: true
+  # Native RTC 参数必须随 setup 下发，不能复用未配置 RTC 的 ready policy。
+  force_setup: true
+
+  # 仅同步模式使用；RTC 模式逐帧执行 buffer。
+  execute_actions_per_chunk: 50
+  max_steps: 800
+
+dataset:
+  root: logs
+  num_episodes: 10
+  reset_time_s: 30.0
+
+robot:
+  # Arms/leg/head use radians; grippers use the model's 0..100 units.
+  reset_pose:
+    right_arm: [-1.159629, 0.772144, 0.729240, 1.341262, 0.379709, 0.363794, -1.538246]
+    right_gripper: [0.0]
+    left_arm: [0.852966, -0.758289, -0.192827, -1.301510, -0.466533, -0.381015, 1.381575]
+    left_gripper: [0.0]
+    leg: [0.580408, 1.433325, 0.901849, 0.000096, 0.0]
+    head: [-0.060640, 0.330046]
+  # Between episodes: open both grippers first, then restore reset_pose,
+  # whose right_gripper/left_gripper values close them back to (0, 0).
+  reset_gripper_cycle:
+    enabled: true
+    open_width: 0.12
+    open_settle_s: 2.0
+    retries: 2
+  control:
+    action_semantics: absolute
+    fps: 30
+    dt: 0.033
+    set_joint_time_from_start: 0.0
+    gripper_action_scale: 0.0012
+    max_joint_delta_per_step: 0.08
+    gripper_max_delta_per_step: 20.0
+    action_filter:
+      enabled: false
+      type: lowpass
+      lowpass: {alpha: 0.3}
+      moving_average: {window_size: 5}
+      one_euro: {freq: 30.0, min_cutoff: 1.0, beta: 0.01, d_cutoff: 1.0}
+    interpolation:
+      enabled: true
+      method: linear
+      input_hz: 30
+      output_hz: 250
+
+controls:
+  takeover_key: i
+  success_key: s
+  failure_key: f
+  # Pressing i stops policy immediately. Frames recorded during this preparation
+  # window stay in the raw archive but are omitted from the converted dataset.
+  takeover_grace_s: 5.0
+  continuous: true
+
+  # 当前实现声明RTC不能与shadow inference同时运行
+  shadow_inference: false
+  shadow_policy_interval_s: 0.25
+
+server:
+  port: 8005
+
+actions_per_chunk: 50
+fps: 30
+obs_queue_timeout: 0.25
+action_response_timeout: 30.0
+
+observation_transport:
+  image_encoding: png
+  png_compress_level: 3
+
+image_preprocess:
+  # 这里只对齐相机几何；checkpoint processor 仍在 PolicyServer 内运行。
+  enabled: true
+  target_size: [224, 224]
+  keep_aspect_ratio: true
+  crop_to_training_aspect: false
+  training_hw: [480, 640]
+  enforce_training_geometry: false
+
+inference_optimization:
+  torch_dtype: bfloat16
+
+  # 先关闭，RTC流程稳定后再打开
+  torch_compile: false
+  use_cuda_graph: false
+
+rtc:
+  enabled: false
+
+  # 当前chunk还剩25步时，启动下一次推理
+  pre_infer_threshold: 25
+
+  # Pi0.5 flow-matching RTC processor 的约束窗口。
+  execution_horizon: 10
+
+  # 0 表示首轮实测后更新；后续请求携带上一轮实测延迟帧数。
+  inference_delay: 0
+
+  # 0 表示仅按 pre_infer_threshold 触发，不额外限制单次观测执行步数。
+  max_steps_per_observation: 0
+
+  # 启动机器人前完成两次推理预热
+  warmup_inferences: 2

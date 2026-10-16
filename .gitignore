@@ -1,0 +1,46 @@
+# Python environments and caches
+.venv/
+venv/
+.deps/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Runtime logs and temporary files
+logs/
+log/
+*.log
+*.jsonl
+*.tmp
+.in_progress/
+
+# Collected and converted datasets
+data/
+datasets/
+outputs/
+output/
+lerobot*/
+*.pbstream
+schema.pb
+manifest.json
+progress.json
+conversion_report.json
+*.parquet
+*.mp4
+*.avi
+*.mcap
+*.tar
+*.tar.gz
+
+# Model artifacts
+checkpoints/
+*.safetensors
+*.pt
+*.pth
+*.onnx
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+
